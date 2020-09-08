@@ -5,23 +5,21 @@
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
 #include <SdFat.h>
-//#include <dht11.h>
+#include <dht11.h>
 
 #define PIN_GPS_PPS 2
-//#define PIN_DHT11 7
+#define PIN_DHT11 7
 #define PIN_SD_CS 10
 
 SoftwareSerial gps(5,6);
 
 SdFat sd;
 SdFile dataFile;
-String gpsLine;
 
-//dht11 DHT11;
+dht11 DHT11;
 
 //每一次文件id
 unsigned long fileId=0;
-unsigned int fileIdLength=0;
 
 void setup() {
   //初始化串口
@@ -48,6 +46,7 @@ void setup() {
   if (!sd.begin(PIN_SD_CS, SPI_FULL_SPEED)){
     sd.initErrorHalt();
   }
+  
   //打开文件
   String fileName=String(fileId)+".txt";
   char fileNameArray[fileName.length()+1];
@@ -59,13 +58,28 @@ void setup() {
 }
 
 void loop() {
-  while (gps.available()>0) {
-    //读GPS数据
-    gpsLine=gps.readStringUntil('\n');
-    //保存到SD卡
-    dataFile.println(gpsLine);
-    delay(1);
+  if(gps.available()){
+    while (gps.available()>0) {
+      //读GPS数据
+      String gpsLine=gps.readStringUntil('\n');
+      //保存到SD卡
+      dataFile.println(gpsLine);
+      delay(5);
+    }
+    //保存DHT11温湿度信息
+    DHT11.read(PIN_DHT11);
+    //温度
+    int tem=(float)DHT11.temperature;
+    //湿度
+    int hum=(float)DHT11.humidity;
+    //保存数据
+    dataFile.print("#####temperature=");
+    dataFile.print(tem);
+    dataFile.print("&humidity=");
+    dataFile.print(hum);
+    dataFile.println("#####");
+    //刷新SD卡
+    dataFile.flush();
+    delay(10);
   }
-  //刷新SD卡
-  dataFile.flush();
 }
